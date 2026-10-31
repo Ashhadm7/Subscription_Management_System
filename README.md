@@ -357,12 +357,4 @@ npx tsx scripts/odoo-transport-check.ts
 
 Sign in as `admin@brightloop.example / Admin@12345`, `staff@brightloop.example / Staff@12345`, `customer@northwind.example / Customer@12345`.
 
-## Suggested next steps (not started)
 
-1. **Live Odoo verification**: connect a real instance, run the sync checklist, record the exact version/API behaviour here.
-2. **Email delivery**: wire a provider to `notifyCustomer`/`notifyRoles`, keep in-app as the fallback.
-3. **Payments**: add a real gateway with webhook reconciliation, keeping manual recording for cash.
-4. **Extensibility**: usage-based billing, proration, multi-currency, plan upgrades.
-5. **Hardening**: Redis rate limiting, structured logging/metrics, queued Odoo retries, audit-log viewer.
-
-Start with `src/lib/billing.ts`, `src/lib/subscriptions.ts`, `src/lib/queries/analytics.ts` and `src/lib/odoo/sync.ts`; `prisma/seed.ts` + `prisma/demo-data.ts` rebuild a working demo state.
