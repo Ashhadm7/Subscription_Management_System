@@ -2,7 +2,7 @@
 
 Subscription management, recurring billing and Odoo synchronisation for **Brightloop Software**, built for **Odoo x Makeathon 9.0**.
 
-> **Status: Phase 1 complete.** Foundation, authentication, role-based access control, the full data model and the Odoo integration layer are implemented and verified. Product, plan, quotation, subscription, billing, invoice, discount and payment modules arrive in Phases 2–3.
+> **Status:** Foundation, authentication, role-based access control, the full data model and the Odoo integration layer are implemented and verified. Product, plan, quotation, subscription, billing, invoice, discount and payment modules arrives in next commits
 
 ---
 
