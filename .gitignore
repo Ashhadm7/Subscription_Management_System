@@ -46,6 +46,9 @@ next-env.d.ts
 
 # local dev server log
 .dev-server.log
+
+# local preview/agent state (never part of the app)
+/.freebuff/
 # secrets and local configuration
 .env.*.local
 *.local

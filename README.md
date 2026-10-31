@@ -2,7 +2,7 @@
 
 Subscription management, recurring billing, Odoo synchronisation and analytics for **Brightloop Software**, built for **Odoo x Makeathon 9.0**.
 
-> **Status: Phase 3 complete.** Phases 1–3 are implemented and verified: authentication and RBAC, products and variants, plans, quotations, the subscription lifecycle, the recurring billing engine, invoices, discounts, payments, Odoo integration, the admin and staff dashboards, the customer portal, notifications, reporting with CSV export, a rule-based finance assistant, scheduled billing, and a judge-ready demo dataset.
+> **Status: Phase 4 complete — submission-ready.** Phases 1–4 are implemented and verified locally: authentication and RBAC, products and variants, plans, quotations, the subscription lifecycle, the recurring billing engine, invoices, discounts, payments, Odoo integration (live instance unverified), the admin and staff dashboards, the customer portal, notifications, reporting with CSV export, a rule-based finance assistant, scheduled billing, and a judge-ready demo dataset. Typecheck, lint, production build, 22 Phase 2 workflow checks, 50 Phase 3 data checks and 12 Odoo protocol checks all pass.
 
 ---
 
@@ -90,7 +90,7 @@ Public registration always creates a **customer**; staff accounts are created by
 - 6 payments — full, partial, multi-method (cash, UPI, card, bank transfer) and one refunded reversal
 - 2 quotations (draft and accepted), billing-run history with logs, and an admin notification inbox
 
-Demo documents are rebuilt on every seed run (only `SUB-*`, `QUO-2026-*`, `INV-2026-*`, `RCPT-*` rows), so re-seeding repairs links instead of duplicating invoices or payments.
+Demo documents are rebuilt on every seed run. The reset deletes the billing documents owned by the five demo customers (and nothing belonging to anyone else), so re-seeding always yields the same book: 6 subscriptions, 7 invoices, 6 payment receipts and 2 quotations — even after a billing cycle has generated extra invoices.
 
 ---
 
@@ -107,8 +107,8 @@ Demo documents are rebuilt on every seed run (only `SUB-*`, `QUO-2026-*`, `INV-2
 | `npm run db:seed` | Catalogue + demo dataset (idempotent) |
 | `npm run db:studio` | Prisma Studio |
 | `npx tsx scripts/verify-phase3.ts` | Dashboard, report, assistant, portal and billing-integrity checks (50 assertions) |
-| `npx tsx --env-file=.env scripts/verify-phase2.ts` | Phase 2 workflow checks (billing, discounts, payments) |
-| `npx tsx --env-file=.env scripts/odoo-transport-check.ts` | Odoo client protocol test |
+| `npx tsx scripts/verify-phase2.ts` | Phase 2 workflow checks (billing, discounts, payments) — **run `npm run db:seed` afterwards**, it bills and closes demo subscriptions |
+| `npx tsx scripts/odoo-transport-check.ts` | Odoo client protocol test against a local stub |
 
 ---
 
@@ -230,7 +230,7 @@ To connect a real instance: create an integration user, generate an API key, fil
 
 ---
 
-## Verification performed (Phase 3)
+## Verification performed (Phase 4)
 
 **Static checks**
 
@@ -238,7 +238,11 @@ To connect a real instance: create an integration user, generate an API key, fil
 - `npm run lint` — clean (0 errors, 0 warnings).
 - `npm run build` — production build succeeded, all routes compiled (dynamic dashboards, reports, portal, PDF, CSV and cron).
 
-**Data-layer and workflow checks** — `npx tsx scripts/verify-phase3.ts`: **50/50 passed**. Coverage: date-range presets and inverted-range repair; admin/staff dashboard metrics and MRR↔ARR consistency; revenue, subscription, invoice and payment reports; bounded/sorted/filtered report tables; assistant intents (MRR, revenue, overdue, expiring, plans, fallback); portal scoping (own subscription readable, another customer's resolves to null); notification inbox; duplicate period invoice rejected by the unique constraint.
+**Workflow checks** — `npx tsx scripts/verify-phase2.ts`: **22/22 passed** (quotation → activation, server-side pricing, duplicate conversion rejected, billing cycle and skip, discount application and usage, partial → paid payment, over-payment rejected, reversal, lifecycle transitions, PDF structure). The script creates only `T2-` records and removes them, but its billing run legitimately bills real subscriptions: run `npm run db:seed` afterwards to restore the demo book.
+
+**Odoo protocol checks** — `npx tsx scripts/odoo-transport-check.ts`: **12/12 passed** against a protocol-faithful JSON-RPC stub (auth mapping, request shape, retry/backoff, product/customer/invoice/payment mapping, idempotent re-push, audit logging, error surfacing). This proves the client contract, not a live deployment.
+
+**Data-layer checks** — `npx tsx scripts/verify-phase3.ts`: **50/50 passed**. Coverage: date-range presets and inverted-range repair; admin/staff dashboard metrics and MRR↔ARR consistency; revenue, subscription, invoice and payment reports; bounded/sorted/filtered report tables; assistant intents (MRR, revenue, overdue, expiring, plans, fallback); portal scoping (own subscription readable, another customer's resolves to null); notification inbox; duplicate period invoice rejected by the unique constraint.
 
 **HTTP and role checks against the production server**
 
@@ -247,6 +251,8 @@ To connect a real instance: create an integration user, generate an API key, fil
 - Customer: all `/portal/*` **200**; `/admin`, `/admin/reports`, `/staff` → **302 `/forbidden`**; `/ops/invoices` → **307 `/forbidden`**.
 - Anonymous: `/admin` → `/login?callbackUrl=…`; `/api/reports/export` → **403**.
 - Invalid password → `/login?error=CredentialsSignin&code=credentials` (no session).
+- `GET /api/auth/session` confirmed the signed-in role for each account; the invalid-password cookie jar returned `null`.
+- Repeated after the Phase 4 build against `npm start`: admin 15/15 routes 200 (incl. CSV export), staff 7/8 with `/admin*` and CSV denied (302/403), customer 9/9 portal routes 200 and every `/admin`, `/ops`, `/staff` route denied, anonymous redirected (307) with APIs returning 401/403.
 - `/api/cron/billing` unauthenticated or without `CRON_SECRET` → **503** with an explicit message; nothing runs.
 
 **Not verified** — anything requiring a live Odoo instance, a configured email provider, or a deployed Vercel project. These are reported as blockers, not passes.
@@ -295,14 +301,30 @@ Never commit `.env`; all secrets stay in the host's environment settings.
 
 ---
 
-## Starting Phase 4
+## Exact commands to run and demonstrate
 
-Phase 4 was intentionally not started. Suggested scope, in priority order:
+```bash
+npm install                 # deps + prisma generate
+npm run db:start            # project-local PostgreSQL (skip if 5432 is already up)
+npm run db:migrate          # apply migrations
+npm run db:seed             # accounts + demo book
+npm run dev                 # http://localhost:3000  (or: npm run build && npm start)
 
-1. **Live Odoo verification**: connect a real instance, run the 12-step sync checklist, and record the exact version/API behaviour in this README.
-2. **Email delivery**: wire Resend (or an equivalent provider) to `notifyCustomer`/`notifyRoles`, add delivery status to notifications, and keep the in-app path as the fallback.
-3. **Payments**: integrate a real gateway (Razorpay/Stripe) with webhook-driven reconciliation, keeping manual recording for cash.
-4. **Extensibility**: usage-based billing, proration on plan changes, multi-currency, and customer-facing plan upgrades.
-5. **Hardening**: Redis-backed rate limiting, structured logging/metrics, background queue for Odoo retries, and an audit log viewer.
+# verification (from a clean seed)
+npm run typecheck && npm run lint && npm run build
+npx tsx scripts/verify-phase2.ts && npm run db:seed   # phase 2 mutates demo billing
+npx tsx scripts/verify-phase3.ts
+npx tsx scripts/odoo-transport-check.ts
+```
 
-Start by reading `src/lib/billing.ts`, `src/lib/subscriptions.ts`, `src/lib/queries/analytics.ts` and `src/lib/odoo/sync.ts`; the seed script (`prisma/seed.ts` + `prisma/demo-data.ts`) is the fastest way to rebuild a working demo state.
+Sign in as `admin@brightloop.example / Admin@12345`, `staff@brightloop.example / Staff@12345`, `customer@northwind.example / Customer@12345`.
+
+## Suggested next steps (not started)
+
+1. **Live Odoo verification**: connect a real instance, run the sync checklist, record the exact version/API behaviour here.
+2. **Email delivery**: wire a provider to `notifyCustomer`/`notifyRoles`, keep in-app as the fallback.
+3. **Payments**: add a real gateway with webhook reconciliation, keeping manual recording for cash.
+4. **Extensibility**: usage-based billing, proration, multi-currency, plan upgrades.
+5. **Hardening**: Redis rate limiting, structured logging/metrics, queued Odoo retries, audit-log viewer.
+
+Start with `src/lib/billing.ts`, `src/lib/subscriptions.ts`, `src/lib/queries/analytics.ts` and `src/lib/odoo/sync.ts`; `prisma/seed.ts` + `prisma/demo-data.ts` rebuild a working demo state.
