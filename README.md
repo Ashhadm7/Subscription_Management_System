@@ -3,7 +3,9 @@
 Subscription management, recurring billing, Odoo synchronisation and analytics for **Brightloop Software**, built for **Odoo x Makeathon 9.0**.
 
 > **Status: Phase 4 complete — submission-ready.** Phases 1–4 are implemented and verified locally: authentication and RBAC, products and variants, plans, quotations, the subscription lifecycle, the recurring billing engine, invoices, discounts, payments, Odoo integration (live instance unverified), the admin and staff dashboards, the customer portal, notifications, reporting with CSV export, a rule-based finance assistant, scheduled billing, and a judge-ready demo dataset. Typecheck, lint, production build, 22 Phase 2 workflow checks, 50 Phase 3 data checks and 12 Odoo protocol checks all pass.
-> Member 1 — Frontend developer
+>
+
+Member 1 — Frontend developer
 UI
 
 - Admin dashboard
